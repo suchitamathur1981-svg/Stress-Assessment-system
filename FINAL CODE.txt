@@ -1,0 +1,283 @@
+import pandas as pd
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+import joblib
+import matplotlib.pyplot as plt
+import os
+import time
+
+data=pd.read_csv('stress_dataset.csv')
+X=data[['Q1','Q2','Q3','Q4','Q5']]
+y=data['Stress']
+X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.2,random_state=42)
+model=DecisionTreeClassifier()
+model.fit(X_train,y_train)
+pred=model.predict(X_test)
+print('Accuracy:',accuracy_score(y_test,pred))
+joblib.dump(model,'stress_model.pkl')
+
+questions = {
+    1: {
+        "q": "How often do you feel overwhelmed by your daily workload?",
+        "options": {"A": "Rarely", "B": "Sometimes", "C": "Almost Always"},
+        "scores": {"A": 1, "B": 2, "C": 3},
+    },
+    2: {
+        "q": "How do you usually react to unexpected changes in your plans?",
+        "options": {
+            "A": "Adapt easily",
+            "B": "Get slightly stressed",
+            "C": "Panic/Get very upset",
+        },
+        "scores": {"A": 1, "B": 2, "C": 3},
+    },
+    3: {
+        "q": "How many hours of quality sleep do you get per night?",
+        "options": {
+            "A": "7-8 hours",
+            "B": "5-6 hours",
+            "C": "Less than 4 hours",
+        },
+        "scores": {"A": 1, "B": 2, "C": 3},
+    },
+    4: {
+        "q": "Do you find time for hobbies or relaxation during your week?",
+        "options": {
+            "A": "Yes, regularly",
+            "B": "Hardly ever",
+            "C": "Never, no time",
+        },
+        "scores": {"A": 1, "B": 2, "C": 3},
+    },
+    5: {
+        "q": "When facing a major decision, how confident do you feel?",
+        "options": {
+            "A": "Very confident",
+            "B": "Somewhat doubtful",
+            "C": "Extremely anxious",
+        },
+        "scores": {"A": 1, "B": 2, "C": 3},
+    },
+}
+
+
+credentials=pd.read_csv('users1.csv')
+flag=0
+
+def verify_stupassword(regno,username,password):
+    global flag
+    for _, row in credentials.iterrows():
+        if row["registration no"] == regno and row["username"] == username and row["password"] == password:
+            flag=1
+            return True
+    return False
+def verify_teacherpassword(regno,username,password):
+    global flag
+    for _, row in credentials.iterrows():
+        if row["registration no"] == regno and row["username"]== username and row["password"] == password:
+            flag=1
+            return True
+    return False
+def stu_login():
+    regno=int(input("Enter Registration number="))
+    username=input("Enter username= ")
+    password=input("Enter password= ")
+
+    if verify_stupassword(regno,username,password):
+        print("✅ Login Successful")
+    else:
+        print("❌ Invalid Username or Password")
+
+    if flag==1:
+        answers=[]
+        total_score=0
+        for key in questions:
+            print(f"Q{key}: {questions[key]['q']}")
+            for opt, desc in questions[key]["options"].items():
+                print(f"   [{opt}] {desc}")
+
+            ans = input("Your choice (A/B/C): ").strip().upper()
+            while ans not in ["A", "B", "C"]:
+              ans = input("Invalid choice! Enter A, B, or C: ").strip().upper()
+            total_score += questions[key]["scores"][ans]
+            answers.append(questions[key]["scores"][ans])
+            print(total_score)
+            print(answers)
+            print("-" * 40)
+        print(model.predict([answers])[0])
+    
+        score=0
+        for i in range(0,len(answers)):
+            score+=answers[i]
+        print(score)
+
+        if score <= 7:
+            category = "Low Stress"
+            advice = "Keep up your positive routine! Maintain boundaries and healthy habits."
+
+        elif score <= 11:
+            category = "Moderate Stress"
+            advice = "You are showing signs of strain. Incorporate short walks, breaks, and deep breathing."
+
+        else:
+            category = "High Stress"
+            advice = "High burnout risk detected. Talk to a counselor, reduce commitments, and prioritize rest."
+
+        marker_vals = [
+          1 if score <= 7 else 0,
+          1 if 8 <= score <= 11 else 0,
+          1 if score >= 12 else 0,
+          ]
+        categories = ["Low (5-7)", "Moderate (8-11)", "High (12-15)"]
+
+        ques=['Q1','Q2','Q3','Q4','Q5']
+        plt.figure(figsize=(8,5))
+        plt.plot(ques,answers,marker="*",linewidth=2,color='blue')
+
+        for i, value in enumerate(answers):
+            plt.text(i,value+0.2,str(value), ha='center', fontsize=10)
+
+        plt.yticks([1,2,3],['Low','Moderate','High'])
+        plt.title("Stress Score Analysis")
+        plt.xlabel("Questions")
+        plt.ylabel("Stress Level")
+        plt.grid(True)
+        graph_name = f'{username}_graph.png'
+        plt.savefig(graph_name)
+        plt.show()
+        plt.close()
+
+        result_df = pd.DataFrame({
+        "registration number":[regno],
+        "Username": [username],
+        "Q1": [answers[0]],
+        "Q2": [answers[1]],
+        "Q3": [answers[2]],
+        "Q4": [answers[3]],
+        "Q5": [answers[4]],
+        "Total Score": [score],
+        "category":[category],
+        "Advice":[advice],
+        "Graph": [graph_name]
+        })
+       
+        file_name = "student_results.csv"
+
+        if os.path.exists(file_name):
+            old_df = pd.read_csv(file_name)
+            result_df = pd.concat([old_df, result_df],ignore_index=True)
+
+        result_df.to_csv(file_name,index=False)
+
+        print("✅ Student result added successfully!")
+       
+    else:
+        print("TRY AGAIN")
+
+
+def teacher_login():
+
+    regno = int(input("Enter Registration number="))
+    username = input("Enter username= ")
+    password = input("Enter password= ")
+
+    if verify_teacherpassword(regno, username, password):
+
+        print("✅ Login Successful")
+        file_name = "student_results.csv"
+        all_result = pd.read_csv(file_name)
+
+        def allStudentDetail():
+            print("\n===== ALL STUDENT RESULTS =====")
+
+            # Display each student's information and graph
+            for index, row in all_result.iterrows():
+
+                print("\n================================")
+                print("Student:", row["Username"])
+                print("Registration No:", row["registration number"])
+                print("Total Score:", row["Total Score"])
+                print("Category:", row["category"])
+                print("Advice:", row["Advice"])
+                print("================================")
+
+                graph_path = row["Graph"]
+
+                if os.path.exists(graph_path):
+
+                    image = plt.imread(graph_path)
+
+                    plt.figure(figsize=(8, 5))
+                    plt.imshow(image)
+                    plt.axis("off")
+                    plt.title(f"Stress Graph - {row['Username']}")
+                    plt.show()
+
+                else:
+
+                    print("❌ Graph not found:",graph_path)
+
+        def individualDetail():
+            registration = int(input("Enter registration number: "))
+            
+            result = all_result.loc[all_result['registration number'] == registration]
+            if not result.empty:
+                print("\n===== STUDENT RESULT =====")
+                print("\n================================")
+                row = result.iloc[0]
+                print("Student:", row["Username"])
+                print("Registration No:", row["registration number"])
+                print("Total Score:", row["Total Score"])
+                print("Category:", row["category"])
+                print("Advice:", row["Advice"])
+                print("================================")
+
+                graph_path = row["Graph"]
+
+                if os.path.exists(graph_path):
+
+                    image = plt.imread(graph_path)
+                    plt.figure(figsize=(8, 5))
+                    plt.imshow(image)
+                    plt.axis("off")
+                    plt.title(f"Stress Graph - {row['Username']}")
+                    plt.show()
+
+                else:
+                    print("❌ Graph not found:",graph_path)
+            else:
+                print("❌ Invalid registration number")
+        
+        choice=int(input("select 1 for all student's detail/ 2 for individual student="))
+        if choice==1:
+            allStudentDetail()
+        elif choice==2:
+            individualDetail()
+        else:
+            print("Invalid choice")
+
+        file_name = "student_results.csv"
+
+        if not os.path.exists(file_name):
+            print("❌ No student results found.")
+            return
+
+        all_result = pd.read_csv(file_name)
+
+        
+
+    else:
+
+        print("❌ Invalid Username or Password")
+
+    
+
+print("==== LOGIN SYSTEM ====")
+choice=int(input("select 1 for student/ 2 for teacher="))
+if choice==1:
+    stu_login()
+elif choice==2:
+    teacher_login()
+else:
+    print("Invalid choice")
