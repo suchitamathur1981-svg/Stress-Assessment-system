@@ -115,14 +115,17 @@ def stu_login():
         if score <= 7:
             category = "Low Stress"
             advice = "Keep up your positive routine! Maintain boundaries and healthy habits."
+            print(advice)
 
         elif score <= 11:
             category = "Moderate Stress"
             advice = "You are showing signs of strain. Incorporate short walks, breaks, and deep breathing."
+            print(advice)
 
         else:
             category = "High Stress"
             advice = "High burnout risk detected. Talk to a counselor, reduce commitments, and prioritize rest."
+            print(advice)
 
         marker_vals = [
           1 if score <= 7 else 0,
